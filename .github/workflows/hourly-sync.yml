@@ -1,8 +1,9 @@
 name: sync
+# schedule registration refresh
 
 on:
   schedule:
-    - cron: "55 * * * *"
+    - cron: "17 * * * *"
   workflow_dispatch:
 
 permissions:
