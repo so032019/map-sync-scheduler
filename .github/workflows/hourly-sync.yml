@@ -1,0 +1,42 @@
+name: sync
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: map-sync-hourly
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+
+    steps:
+      - name: Checkout private sync core
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: so032019/map-sync-core
+          ref: 12383b921df794fe7f726adc3000e89209a70635
+          token: ${{ secrets.MAP_SYNC_CORE_READ_TOKEN }}
+          path: core
+          persist-credentials: false
+
+      - name: Install runtime dependency
+        run: python3 -m pip install --disable-pip-version-check -r core/requirements.txt
+
+      - name: Synchronize regions
+        env:
+          R2_ENDPOINT_URL: ${{ secrets.R2_ENDPOINT_URL }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: >-
+          python3 core/scripts/cloud_sync.py
+          --region chiba
+          --region tokyo
