@@ -69,7 +69,8 @@ jobs:
           set -euo pipefail
           args=(--mode "${{ inputs.mode }}" --public-root "$GITHUB_WORKSPACE/core")
           if [[ "${{ inputs.region }}" == "all" ]]; then
-            args+=(--region chiba --region tokyo --region saitama)
+            # Saitama remains a manual opt-in until its first active R2 release exists.
+            args+=(--region chiba --region tokyo)
           else
             args+=(--region "${{ inputs.region }}")
           fi
