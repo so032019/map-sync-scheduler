@@ -12,6 +12,7 @@ on:
           - all
           - chiba
           - tokyo
+          - saitama
       mode:
         description: 実行モード
         required: true
@@ -47,7 +48,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: so032019/map-sync-core
-          ref: 181822b49ba659d0cded134136409230fc897251
+          ref: 56d1865eff5696d2c3d31622e95bdaf1b1c51647
           token: ${{ secrets.MAP_SYNC_CORE_READ_TOKEN }}
           path: core
           persist-credentials: false
@@ -68,7 +69,7 @@ jobs:
           set -euo pipefail
           args=(--mode "${{ inputs.mode }}" --public-root "$GITHUB_WORKSPACE/core")
           if [[ "${{ inputs.region }}" == "all" ]]; then
-            args+=(--region chiba --region tokyo)
+            args+=(--region chiba --region tokyo --region saitama)
           else
             args+=(--region "${{ inputs.region }}")
           fi
