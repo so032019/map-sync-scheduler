@@ -1,0 +1,83 @@
+name: monthly-master-sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      region:
+        description: 同期対象の地域
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - chiba
+          - tokyo
+      mode:
+        description: 実行モード
+        required: true
+        default: publish
+        type: choice
+        options:
+          - publish
+          - dry-run
+      source:
+        description: 起動元（監査用）
+        required: true
+        default: manual
+        type: choice
+        options:
+          - schedule
+          - admin
+          - manual
+
+permissions:
+  contents: read
+
+concurrency:
+  group: map-master-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+
+    steps:
+      - name: Checkout private sync core
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: so032019/map-sync-core
+          ref: 181822b49ba659d0cded134136409230fc897251
+          token: ${{ secrets.MAP_SYNC_CORE_READ_TOKEN }}
+          path: core
+          persist-credentials: false
+
+      - name: Checkout public data builders
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30af803
+        with:
+          repository: so032019/ur_life_map
+          ref: main
+          path: public
+          persist-credentials: false
+
+      - name: Install runtime dependencies
+        run: python3 -m pip install --disable-pip-version-check -r core/requirements.txt
+
+      - name: Synchronize master data
+        env:
+          R2_ENDPOINT_URL: ${{ secrets.R2_ENDPOINT_URL }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          OPENROUTE_SERVICE_API: ${{ secrets.OPENROUTE_SERVICE_API }}
+          YAHOO_CLIENT_ID: ${{ secrets.YAHOO_CLIENT_ID }}
+          PYTHONUNBUFFERED: "1"
+        run: |
+          set -euo pipefail
+          args=(--mode "${{ inputs.mode }}" --public-root "$GITHUB_WORKSPACE/public")
+          if [[ "${{ inputs.region }}" == "all" ]]; then
+            args+=(--region chiba --region tokyo)
+          else
+            args+=(--region "${{ inputs.region }}")
+          fi
+          python3 "$GITHUB_WORKSPACE/core/scripts/master_sync.py" "${args[@]}"
