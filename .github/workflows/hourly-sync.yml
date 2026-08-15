@@ -1,8 +1,18 @@
 name: sync
-# schedule registration refresh
 
 on:
   workflow_dispatch:
+    inputs:
+      region:
+        description: 同期対象の地域
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - chiba
+          - tokyo
+          - saitama
 
 permissions:
   contents: read
@@ -15,7 +25,6 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     timeout-minutes: 330
-
     steps:
       - name: Checkout private sync core
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
@@ -35,8 +44,12 @@ jobs:
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
-        run: >-
-          python3 core/scripts/cloud_sync.py
-          --region chiba
-          --region tokyo
-          --region saitama
+        run: |
+          set -euo pipefail
+          args=(python3 core/scripts/cloud_sync.py)
+          if [[ "${{ inputs.region }}" == "all" ]]; then
+            args+=(--region chiba --region tokyo --region saitama)
+          else
+            args+=(--region "${{ inputs.region }}")
+          fi
+          "${args[@]}"
