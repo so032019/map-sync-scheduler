@@ -41,14 +41,15 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 330
+    # GitHub Actionsの6時間上限に近づけず、地域単位で早期に失敗させる。
+    timeout-minutes: 120
 
     steps:
       - name: Checkout private sync core
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: so032019/map-sync-core
-          ref: 56d1865eff5696d2c3d31622e95bdaf1b1c51647
+          ref: 4d6061c0e02be994cc9e1e2f4bf7e87838db8408
           token: ${{ secrets.MAP_SYNC_CORE_READ_TOKEN }}
           path: core
           persist-credentials: false
@@ -64,6 +65,9 @@ jobs:
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
           OPENROUTE_SERVICE_API: ${{ secrets.OPENROUTE_SERVICE_API }}
           YAHOO_CLIENT_ID: ${{ secrets.YAHOO_CLIENT_ID }}
+          # OpenRouteService Standard plan: 2,000/day・40/min を安全側で利用する。
+          ORS_MAX_REQUESTS: "1800"
+          ORS_MAX_RUNTIME_SECONDS: "2700"
           PYTHONUNBUFFERED: "1"
         run: |
           set -euo pipefail
