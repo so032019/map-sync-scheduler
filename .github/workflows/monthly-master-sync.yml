@@ -1,0 +1,88 @@
+name: monthly-master-sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      region:
+        description: 同期対象の地域
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - chiba
+          - tokyo
+          - saitama
+      mode:
+        description: 実行モード
+        required: true
+        default: publish
+        type: choice
+        options:
+          - publish
+          - dry-run
+      source:
+        description: 起動元（監査用）
+        required: true
+        default: manual
+        type: choice
+        options:
+          - schedule
+          - admin
+          - manual
+
+permissions:
+  contents: read
+
+concurrency:
+  group: map-master-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    # GitHub Actionsの6時間上限に近づけず、地域単位で早期に失敗させる。
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout private sync core
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: so032019/map-sync-core
+          ref: 78ea70d6562b9916fd29b4b105943311b8bc36f3
+          token: ${{ secrets.MAP_SYNC_CORE_READ_TOKEN }}
+          path: core
+          persist-credentials: false
+
+      - name: Install runtime dependencies
+        run: python3 -m pip install --disable-pip-version-check -r core/requirements.txt
+
+      - name: Restore Saitama bootstrap release
+        if: inputs.region == 'saitama'
+        run: |
+          set -euo pipefail
+          test -f core/data/bootstrap/saitama-initial.tar.gz
+          tar --extract --gzip --file core/data/bootstrap/saitama-initial.tar.gz --directory "$GITHUB_WORKSPACE/core"
+
+      - name: Synchronize master data
+        env:
+          R2_ENDPOINT_URL: ${{ secrets.R2_ENDPOINT_URL }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          OPENROUTE_SERVICE_API: ${{ secrets.OPENROUTE_SERVICE_API }}
+          YAHOO_CLIENT_ID: ${{ secrets.YAHOO_CLIENT_ID }}
+          # OpenRouteService Standard plan: 2,000/day・40/min を安全側で利用する。
+          ORS_MAX_REQUESTS: "1800"
+          ORS_MAX_RUNTIME_SECONDS: "2700"
+          PYTHONUNBUFFERED: "1"
+        run: |
+          set -euo pipefail
+          args=(--mode "${{ inputs.mode }}" --public-root "$GITHUB_WORKSPACE/core")
+          if [[ "${{ inputs.region }}" == "all" ]]; then
+            # Saitama is intentionally excluded from the compatibility batch.
+            args+=(--region chiba --region tokyo)
+          else
+            args+=(--region "${{ inputs.region }}")
+          fi
+          python3 "$GITHUB_WORKSPACE/core/scripts/master_sync.py" "${args[@]}"
