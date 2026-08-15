@@ -44,7 +44,7 @@ jobs:
 
     steps:
       - name: Checkout private sync core
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: so032019/map-sync-core
           ref: 181822b49ba659d0cded134136409230fc897251
@@ -53,7 +53,7 @@ jobs:
           persist-credentials: false
 
       - name: Checkout public data builders
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30af803
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: so032019/ur_life_map
           ref: main
