@@ -49,13 +49,20 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: so032019/map-sync-core
-          ref: 4d6061c0e02be994cc9e1e2f4bf7e87838db8408
+          ref: 0fbe433
           token: ${{ secrets.MAP_SYNC_CORE_READ_TOKEN }}
           path: core
           persist-credentials: false
 
       - name: Install runtime dependencies
         run: python3 -m pip install --disable-pip-version-check -r core/requirements.txt
+
+      - name: Restore Saitama bootstrap release
+        if: inputs.region == 'saitama'
+        run: |
+          set -euo pipefail
+          test -f core/data/bootstrap/saitama-initial.tar.gz
+          tar --extract --gzip --file core/data/bootstrap/saitama-initial.tar.gz --directory "$GITHUB_WORKSPACE/core"
 
       - name: Synchronize master data
         env:
@@ -73,7 +80,7 @@ jobs:
           set -euo pipefail
           args=(--mode "${{ inputs.mode }}" --public-root "$GITHUB_WORKSPACE/core")
           if [[ "${{ inputs.region }}" == "all" ]]; then
-            # Saitama remains a manual opt-in until its first active R2 release exists.
+            # Saitama is intentionally excluded from the compatibility batch.
             args+=(--region chiba --region tokyo)
           else
             args+=(--region "${{ inputs.region }}")
