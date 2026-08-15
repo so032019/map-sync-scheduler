@@ -1,5 +1,7 @@
 name: sync
 
+run-name: sync / ${{ inputs.request_id || 'manual' }} / ${{ inputs.region || 'all' }}
+
 on:
   workflow_dispatch:
     inputs:
@@ -13,6 +15,10 @@ on:
           - chiba
           - tokyo
           - saitama
+      request_id:
+        description: 起動要求の追跡ID
+        required: false
+        type: string
 
 permissions:
   contents: read
