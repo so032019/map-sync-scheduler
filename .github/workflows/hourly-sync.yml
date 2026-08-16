@@ -55,6 +55,7 @@ jobs:
         run: |
           set -euo pipefail
           args=(python3 core/scripts/cloud_sync.py)
+          args+=(--timeout 120)
           if [[ "${{ inputs.region }}" == "all" ]]; then
             args+=(--region chiba --region tokyo --region saitama --region kanagawa)
           else
