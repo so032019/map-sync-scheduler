@@ -32,12 +32,15 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     timeout-minutes: 330
+    env:
+      OPS_API_URL: ${{ vars.OPS_API_URL || 'https://ur-life-map-ops-api-staging.ur-lifemap-admin.workers.dev' }}
+      SYNC_TRIGGER_TOKEN: ${{ secrets.SYNC_TRIGGER_TOKEN }}
     steps:
       - name: Checkout private sync core
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: so032019/map-sync-core
-          ref: 40e7c91861239bec9407f02ec626e9a040afc266
+          ref: 4f95e28f4ce174f93015d9b1e7d9c35208cd77a0
           token: ${{ secrets.MAP_SYNC_CORE_READ_TOKEN }}
           path: core
           persist-credentials: false
@@ -52,6 +55,7 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
           UR_LIFE_MAP_PUBLIC_ROOT: ${{ github.workspace }}/core
+          SYNC_REQUEST_ID: ${{ inputs.request_id }}
         run: |
           set -euo pipefail
           args=(python3 core/scripts/cloud_sync.py)
