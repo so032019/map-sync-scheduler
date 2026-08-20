@@ -1,11 +1,8 @@
 name: sync
 
-run-name: sync / ${{ inputs.request_id || 'vacancy-events-real-e2e-2' }} / ${{ inputs.region || 'chiba' }}
+run-name: sync / ${{ inputs.request_id || 'manual' }} / ${{ inputs.region || 'all' }}
 
 on:
-  push:
-    branches:
-      - feat/ops-sync-reporting
   workflow_dispatch:
     inputs:
       region:
@@ -58,15 +55,14 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
           UR_LIFE_MAP_PUBLIC_ROOT: ${{ github.workspace }}/core
-          SYNC_REQUEST_ID: ${{ inputs.request_id || 'vacancy-events-real-e2e-2' }}
+          SYNC_REQUEST_ID: ${{ inputs.request_id }}
         run: |
           set -euo pipefail
           args=(python3 core/scripts/cloud_sync.py)
           args+=(--timeout 120)
-          region="${{ inputs.region || 'chiba' }}"
-          if [[ "$region" == "all" ]]; then
+          if [[ "${{ inputs.region }}" == "all" ]]; then
             args+=(--region chiba --region tokyo --region saitama --region kanagawa)
           else
-            args+=(--region "$region")
+            args+=(--region "${{ inputs.region }}")
           fi
           "${args[@]}"
