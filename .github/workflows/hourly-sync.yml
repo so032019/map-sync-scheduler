@@ -1,8 +1,11 @@
 name: sync
 
-run-name: sync / ${{ inputs.request_id || 'manual' }} / ${{ inputs.region || 'all' }}
+run-name: sync / ${{ inputs.request_id || (github.event_name == 'push' && 'ops-e2e') || 'manual' }} / ${{ inputs.region || (github.event_name == 'push' && 'chiba') || 'all' }}
 
 on:
+  push:
+    branches:
+      - feat/ops-sync-reporting
   workflow_dispatch:
     inputs:
       region:
@@ -52,16 +55,17 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
           UR_LIFE_MAP_PUBLIC_ROOT: ${{ github.workspace }}/core
-          OPS_API_URL: ${{ vars.OPS_API_URL }}
+          OPS_API_URL: ${{ vars.OPS_API_URL || 'https://ur-life-map-ops-api-staging.ur-lifemap-admin.workers.dev' }}
           SYNC_TRIGGER_TOKEN: ${{ secrets.SYNC_TRIGGER_TOKEN }}
-          SYNC_REQUEST_ID: ${{ inputs.request_id }}
+          SYNC_REQUEST_ID: ${{ inputs.request_id || (github.event_name == 'push' && 'ops-e2e') || '' }}
         run: |
           set -euo pipefail
           args=(python3 core/scripts/cloud_sync.py)
           args+=(--timeout 120)
-          if [[ "${{ inputs.region }}" == "all" ]]; then
+          region="${{ inputs.region || (github.event_name == 'push' && 'chiba') || 'all' }}"
+          if [[ "$region" == "all" ]]; then
             args+=(--region chiba --region tokyo --region saitama --region kanagawa)
           else
-            args+=(--region "${{ inputs.region }}")
+            args+=(--region "$region")
           fi
           "${args[@]}"
