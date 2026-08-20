@@ -40,7 +40,7 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: so032019/map-sync-core
-          ref: 41c02dd8cba86ccfd0c12a455e35184cdfdf6126
+          ref: 20dcea072987caacd98cf5fb41843663886aa6da
           token: ${{ secrets.MAP_SYNC_CORE_READ_TOKEN }}
           path: core
           persist-credentials: false
