@@ -32,6 +32,9 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     timeout-minutes: 330
+    env:
+      OPS_API_URL: ${{ vars.OPS_API_URL || 'https://ur-life-map-ops-api-staging.ur-lifemap-admin.workers.dev' }}
+      SYNC_TRIGGER_TOKEN: ${{ secrets.SYNC_TRIGGER_TOKEN }}
     steps:
       - name: Checkout private sync core
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
@@ -45,6 +48,16 @@ jobs:
       - name: Install runtime dependency
         run: python3 -m pip install --disable-pip-version-check -r core/requirements.txt
 
+      - name: Verify ops API authentication for E2E
+        if: ${{ startsWith(inputs.request_id, 'ops-e2e-') }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SYNC_TRIGGER_TOKEN" || { echo "SYNC_TRIGGER_TOKEN is not configured" >&2; exit 2; }
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SYNC_TRIGGER_TOKEN" \
+            "$OPS_API_URL/internal/v1/sync-runs?region=${{ inputs.region }}&limit=1" >/dev/null
+
       - name: Synchronize regions
         env:
           R2_ENDPOINT_URL: ${{ secrets.R2_ENDPOINT_URL }}
@@ -52,8 +65,6 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
           UR_LIFE_MAP_PUBLIC_ROOT: ${{ github.workspace }}/core
-          OPS_API_URL: ${{ vars.OPS_API_URL || 'https://ur-life-map-ops-api-staging.ur-lifemap-admin.workers.dev' }}
-          SYNC_TRIGGER_TOKEN: ${{ secrets.SYNC_TRIGGER_TOKEN }}
           SYNC_REQUEST_ID: ${{ inputs.request_id }}
         run: |
           set -euo pipefail
@@ -65,3 +76,19 @@ jobs:
             args+=(--region "${{ inputs.region }}")
           fi
           "${args[@]}"
+
+      - name: Verify ops API record for E2E
+        if: ${{ startsWith(inputs.request_id, 'ops-e2e-') }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          body=$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SYNC_TRIGGER_TOKEN" \
+            "$OPS_API_URL/internal/v1/sync-runs?region=${{ inputs.region }}&limit=100")
+          BODY="$body" REQUEST_ID="${{ inputs.request_id }}" REGION="${{ inputs.region }}" node -e '
+            const data = JSON.parse(process.env.BODY || "{}");
+            const row = (data.runs || []).find((x) => x.requestId === process.env.REQUEST_ID && x.region === process.env.REGION);
+            if (!row) process.exit(2);
+            if (row.status !== "success") process.exit(3);
+            console.log(JSON.stringify(row));
+          '
