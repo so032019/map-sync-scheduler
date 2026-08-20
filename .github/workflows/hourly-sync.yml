@@ -37,7 +37,7 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: so032019/map-sync-core
-          ref: 40e7c91861239bec9407f02ec626e9a040afc266
+          ref: 66547c5a0a5b0cb4428b1ad7f571068eb2dd8f71
           token: ${{ secrets.MAP_SYNC_CORE_READ_TOKEN }}
           path: core
           persist-credentials: false
@@ -52,6 +52,9 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
           UR_LIFE_MAP_PUBLIC_ROOT: ${{ github.workspace }}/core
+          OPS_API_URL: ${{ vars.OPS_API_URL }}
+          OPS_SYNC_REPORT_TOKEN: ${{ secrets.OPS_SYNC_REPORT_TOKEN }}
+          SYNC_REQUEST_ID: ${{ inputs.request_id }}
         run: |
           set -euo pipefail
           args=(python3 core/scripts/cloud_sync.py)
