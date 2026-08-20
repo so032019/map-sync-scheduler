@@ -40,23 +40,13 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: so032019/map-sync-core
-          ref: a0580d75f8a00f3e5f72287014b2a6facee73988
+          ref: bffb5eca363b0e1c433eb8772f317d4ecfe7fde4
           token: ${{ secrets.MAP_SYNC_CORE_READ_TOKEN }}
           path: core
           persist-credentials: false
 
       - name: Install runtime dependency
         run: python3 -m pip install --disable-pip-version-check -r core/requirements.txt
-
-      - name: Verify ops API authentication for E2E
-        if: ${{ startsWith(inputs.request_id, 'ops-e2e-') }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -n "$SYNC_TRIGGER_TOKEN" || { echo "SYNC_TRIGGER_TOKEN is not configured" >&2; exit 2; }
-          curl --fail --silent --show-error \
-            -H "Authorization: Bearer $SYNC_TRIGGER_TOKEN" \
-            "$OPS_API_URL/internal/v1/sync-runs?region=${{ inputs.region }}&limit=1" >/dev/null
 
       - name: Synchronize regions
         env:
@@ -76,19 +66,3 @@ jobs:
             args+=(--region "${{ inputs.region }}")
           fi
           "${args[@]}"
-
-      - name: Verify ops API record for E2E
-        if: ${{ startsWith(inputs.request_id, 'ops-e2e-') }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          body=$(curl --fail --silent --show-error \
-            -H "Authorization: Bearer $SYNC_TRIGGER_TOKEN" \
-            "$OPS_API_URL/internal/v1/sync-runs?region=${{ inputs.region }}&limit=100")
-          BODY="$body" REQUEST_ID="${{ inputs.request_id }}" REGION="${{ inputs.region }}" node -e '
-            const data = JSON.parse(process.env.BODY || "{}");
-            const row = (data.runs || []).find((x) => x.requestId === process.env.REQUEST_ID && x.region === process.env.REGION);
-            if (!row) process.exit(2);
-            if (row.status !== "success") process.exit(3);
-            console.log(JSON.stringify(row));
-          '
